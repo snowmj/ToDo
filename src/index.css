@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Source Serif 4", Georgia, "Iowan Old Style", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  --paper: #faf6ee;
+  --paper-raised: #ffffff;
+  --ink: #201c14;
+  --ink-soft: #6b6355;
+  --line: #e6ddc9;
+  --accent: #1f7a6c;
+  --accent-soft: rgba(31, 122, 108, 0.12);
+  --accent-line: rgba(31, 122, 108, 0.35);
+  --danger: #b3492f;
+  --ok: #3f7d4e;
+  --warn: #b8862f;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper: #16140f;
+  --paper-raised: #1f1c15;
+  --ink: #f1ecdf;
+  --ink-soft: #a99f8a;
+  --line: #35301f;
+  --accent: #4fc3ab;
+  --accent-soft: rgba(79, 195, 171, 0.14);
+  --accent-line: rgba(79, 195, 171, 0.4);
+  --danger: #e08464;
+  --ok: #7cc98d;
+  --warn: #e0b564;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #16140f;
+    --paper-raised: #1f1c15;
+    --ink: #f1ecdf;
+    --ink-soft: #a99f8a;
+    --line: #35301f;
+    --accent: #4fc3ab;
+    --accent-soft: rgba(79, 195, 171, 0.14);
+    --accent-line: rgba(79, 195, 171, 0.4);
+    --danger: #e08464;
+    --ok: #7cc98d;
+    --warn: #e0b564;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+button {
+  font-family: inherit;
+}
