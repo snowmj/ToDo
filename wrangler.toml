@@ -1,2 +1,6 @@
 name = "dailyarc"
 compatibility_date = "2026-01-01"
+
+[vars]
+VITE_SUPABASE_URL = "https://dkkdibfhmmbqwbgmpetk.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRra2RpYmZobW1icXdiZ21wZXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUyNjY5NDEsImV4cCI6MjA2MDg0Mjk0MX0.EyebJ9iWylWIIWg8p2YXYcryZivBDEYfn6hGscOyaUA"
