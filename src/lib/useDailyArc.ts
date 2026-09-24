@@ -88,6 +88,38 @@ export function useDailyArc() {
     await supabase.from('dailyarc_tasks').update({ active }).eq('id', taskId);
   }, []);
 
+  const deleteTask = useCallback(async (taskId: string) => {
+    const prevTasks = tasks;
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setCompletions((prev) => prev.filter((cc) => cc.task_id !== taskId));
+    const { error: delErr } = await supabase.from('dailyarc_tasks').delete().eq('id', taskId);
+    if (delErr) {
+      setTasks(prevTasks);
+      reload();
+    }
+  }, [tasks, reload]);
+
+  const reorderTasks = useCallback(async (categoryId: string, orderedTaskIds: string[]) => {
+    const prevTasks = tasks;
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.category_id !== categoryId) return t;
+        const newOrder = orderedTaskIds.indexOf(t.id);
+        return newOrder === -1 ? t : { ...t, sort_order: newOrder };
+      })
+    );
+    try {
+      await Promise.all(
+        orderedTaskIds.map((id, index) =>
+          supabase.from('dailyarc_tasks').update({ sort_order: index }).eq('id', id)
+        )
+      );
+    } catch {
+      setTasks(prevTasks);
+      reload();
+    }
+  }, [tasks, reload]);
+
   const addCategory = useCallback(async (name: string, icon: string) => {
     const sortOrder = categories.length;
     const { data, error: insErr } = await supabase
@@ -117,6 +149,8 @@ export function useDailyArc() {
     toggleCompletion,
     addTask,
     setTaskActive,
+    deleteTask,
+    reorderTasks,
     addCategory,
     toggleTrackHistory,
     todayStr,
