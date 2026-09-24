@@ -88,6 +88,18 @@ export function useDailyArc() {
     await supabase.from('dailyarc_tasks').update({ active }).eq('id', taskId);
   }, []);
 
+  const updateTaskLabel = useCallback(async (taskId: string, label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    const prevTasks = tasks;
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, label: trimmed } : t)));
+    const { error: updErr } = await supabase.from('dailyarc_tasks').update({ label: trimmed }).eq('id', taskId);
+    if (updErr) {
+      setTasks(prevTasks);
+      reload();
+    }
+  }, [tasks, reload]);
+
   const deleteTask = useCallback(async (taskId: string) => {
     const prevTasks = tasks;
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -149,6 +161,7 @@ export function useDailyArc() {
     toggleCompletion,
     addTask,
     setTaskActive,
+    updateTaskLabel,
     deleteTask,
     reorderTasks,
     addCategory,

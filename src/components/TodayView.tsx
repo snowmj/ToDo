@@ -3,12 +3,27 @@ import type { Category, Task } from '../lib/types';
 import type { useDailyArc } from '../lib/useDailyArc';
 
 export function TodayView(props: ReturnType<typeof useDailyArc>) {
-  const { categories, tasks, isDoneOn, toggleCompletion, addTask, deleteTask, reorderTasks, todayStr } = props;
+  const { categories, tasks, isDoneOn, toggleCompletion, addTask, deleteTask, updateTaskLabel, reorderTasks, todayStr } = props;
   const today = todayStr();
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
+
+  const startEditing = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditDraft(task.label);
+  };
+
+  const commitEdit = async (taskId: string) => {
+    const label = editDraft.trim();
+    setEditingTaskId(null);
+    if (!label) return;
+    const task = tasks.find((t) => t.id === taskId);
+    if (task && label !== task.label) await updateTaskLabel(taskId, label);
+  };
 
   const sorted = [...categories].sort((a, b) => a.sort_order - b.sort_order);
 
@@ -95,25 +110,46 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
                     </span>
                     <button
                       onClick={() => void toggleCompletion(task.id, today)}
-                      className="flex-1 flex items-start gap-2 text-left text-sm rounded py-1.5 transition"
+                      className="flex-none mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center"
                       style={{
-                        color: done ? 'var(--ink-soft)' : 'var(--ink)',
-                        textDecoration: done ? 'line-through' : 'none',
+                        borderColor: done ? 'var(--accent)' : 'var(--line)',
+                        background: done ? 'var(--accent)' : 'transparent',
                       }}
+                      title="Mark complete"
+                      aria-label={done ? `Mark ${task.label} incomplete` : `Mark ${task.label} complete`}
                     >
+                      {done && (
+                        <span style={{ color: 'var(--paper)', fontSize: 10, lineHeight: 1 }}>✓</span>
+                      )}
+                    </button>
+                    {editingTaskId === task.id ? (
+                      <input
+                        autoFocus
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                        onBlur={() => void commitEdit(task.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur();
+                          } else if (e.key === 'Escape') {
+                            setEditingTaskId(null);
+                          }
+                        }}
+                        className="flex-1 text-sm rounded py-1.5 px-1 border"
+                        style={{ borderColor: 'var(--accent)', background: 'var(--paper)', color: 'var(--ink)' }}
+                      />
+                    ) : (
                       <span
-                        className="mt-0.5 flex-none w-4 h-4 rounded-full border flex items-center justify-center"
+                        onClick={() => startEditing(task)}
+                        className="flex-1 text-left text-sm rounded py-1.5 cursor-text"
                         style={{
-                          borderColor: done ? 'var(--accent)' : 'var(--line)',
-                          background: done ? 'var(--accent)' : 'transparent',
+                          color: done ? 'var(--ink-soft)' : 'var(--ink)',
+                          textDecoration: done ? 'line-through' : 'none',
                         }}
                       >
-                        {done && (
-                          <span style={{ color: 'var(--paper)', fontSize: 10, lineHeight: 1 }}>✓</span>
-                        )}
+                        {task.label}
                       </span>
-                      {task.label}
-                    </button>
+                    )}
                     <button
                       onClick={() => {
                         if (window.confirm(`Delete "${task.label}"?`)) void deleteTask(task.id);
