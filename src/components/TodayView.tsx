@@ -3,7 +3,7 @@ import type { Category, Task } from '../lib/types';
 import type { useDailyArc } from '../lib/useDailyArc';
 
 export function TodayView(props: ReturnType<typeof useDailyArc>) {
-  const { categories, tasks, isDoneOn, toggleCompletion, addTask, deleteTask, updateTaskLabel, reorderTasks, todayStr } = props;
+  const { categories, tasks, isDoneOn, toggleCompletion, addTask, deleteTask, updateTaskLabel, reorderTasks, deleteCategory, reorderCategories, todayStr } = props;
   const today = todayStr();
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -11,6 +11,7 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
+  const [settingsFor, setSettingsFor] = useState<string | null>(null);
 
   const startEditing = (task: Task) => {
     setEditingTaskId(task.id);
@@ -27,6 +28,15 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
 
   const sorted = [...categories].sort((a, b) => a.sort_order - b.sort_order);
 
+  const moveCategory = (categoryId: string, delta: -1 | 1) => {
+    const ids = sorted.map((c) => c.id);
+    const from = ids.indexOf(categoryId);
+    const to = from + delta;
+    if (from === -1 || to < 0 || to >= ids.length) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    void reorderCategories(ids);
+  };
+
   const submitAdd = async (categoryId: string) => {
     const label = draft.trim();
     if (!label) return;
@@ -37,7 +47,7 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
 
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {sorted.map((cat: Category) => {
+      {sorted.map((cat: Category, catIndex: number) => {
         const catTasks = tasks
           .filter((t) => t.category_id === cat.id && t.active)
           .sort((a, b) => a.sort_order - b.sort_order);
@@ -52,12 +62,65 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
                 <span>{cat.icon}</span>
                 {cat.name}
               </h2>
-              {cat.track_history && (
-                <span className="label" style={{ color: 'var(--accent)' }}>
-                  tracked
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {cat.track_history && (
+                  <span className="label" style={{ color: 'var(--accent)' }}>
+                    tracked
+                  </span>
+                )}
+                <button
+                  onClick={() => setSettingsFor((prev) => (prev === cat.id ? null : cat.id))}
+                  className="flex-none rounded"
+                  style={{
+                    color: settingsFor === cat.id ? 'var(--accent)' : 'var(--ink-soft)',
+                    fontSize: 16,
+                    lineHeight: 1,
+                    padding: '4px 6px',
+                  }}
+                  title="Section settings"
+                  aria-label={`Settings for ${cat.name}`}
+                  aria-expanded={settingsFor === cat.id}
+                >
+                  ⚙
+                </button>
+              </div>
             </div>
+            {settingsFor === cat.id && (
+              <div
+                className="mb-3 flex flex-wrap items-center gap-2 rounded border px-2 py-1.5 text-sm"
+                style={{ borderColor: 'var(--line)', background: 'var(--paper)' }}
+              >
+                <button
+                  onClick={() => moveCategory(cat.id, -1)}
+                  disabled={catIndex === 0}
+                  className="rounded px-2 py-0.5 border"
+                  style={{ borderColor: 'var(--line)', opacity: catIndex === 0 ? 0.4 : 1 }}
+                  title="Move section earlier"
+                >
+                  ← Move
+                </button>
+                <button
+                  onClick={() => moveCategory(cat.id, 1)}
+                  disabled={catIndex === sorted.length - 1}
+                  className="rounded px-2 py-0.5 border"
+                  style={{ borderColor: 'var(--line)', opacity: catIndex === sorted.length - 1 ? 0.4 : 1 }}
+                  title="Move section later"
+                >
+                  Move →
+                </button>
+                <button
+                  onClick={() => {
+                    setSettingsFor(null);
+                    void deleteCategory(cat.id);
+                  }}
+                  className="ml-auto rounded px-2 py-0.5 border"
+                  style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                  title="Delete section"
+                >
+                  Delete section
+                </button>
+              </div>
+            )}
             <ul className="space-y-1.5">
               {catTasks.map((task: Task) => {
                 const done = isDoneOn(task.id, today);
@@ -151,9 +214,7 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
                       </span>
                     )}
                     <button
-                      onClick={() => {
-                        if (window.confirm(`Delete "${task.label}"?`)) void deleteTask(task.id);
-                      }}
+                      onClick={() => void deleteTask(task.id)}
                       className="flex-none rounded"
                       style={{ color: 'var(--ink-soft)', fontSize: 14, lineHeight: 1, padding: '4px 6px' }}
                       title="Delete task"

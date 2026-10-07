@@ -32,6 +32,19 @@ function AppShell() {
   const data = useDailyArc();
   const [tab, setTab] = useState<Tab>('today');
   const { theme, setTheme } = useTheme();
+  const { undo } = data;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      e.preventDefault();
+      void undo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo]);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'today', label: 'Today' },
@@ -69,6 +82,16 @@ function AppShell() {
               </button>
             ))}
           </nav>
+          <button
+            onClick={() => void data.undo()}
+            disabled={!data.undoLabel}
+            className="label"
+            style={{ opacity: data.undoLabel ? 1 : 0.35, fontSize: 18, lineHeight: 1 }}
+            title={data.undoLabel ? `Undo: ${data.undoLabel}` : 'Nothing to undo'}
+            aria-label="Undo last action"
+          >
+            ↶
+          </button>
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             className="label"
