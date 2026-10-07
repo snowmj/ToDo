@@ -235,6 +235,22 @@ export function useDailyArc() {
     return insErr;
   }, [categories, pushUndo, removeCategoryRow]);
 
+  const updateCategory = useCallback(async (categoryId: string, patch: { name?: string; icon?: string | null }) => {
+    const before = categories.find((c) => c.id === categoryId);
+    if (!before) return;
+    const prev = { name: before.name, icon: before.icon };
+    setCategories((all) => all.map((c) => (c.id === categoryId ? { ...c, ...patch } : c)));
+    const { error: updErr } = await supabase.from('dailyarc_categories').update(patch).eq('id', categoryId);
+    if (updErr) {
+      reload();
+      return;
+    }
+    pushUndo('Edit section', async () => {
+      setCategories((all) => all.map((c) => (c.id === categoryId ? { ...c, ...prev } : c)));
+      await supabase.from('dailyarc_categories').update(prev).eq('id', categoryId);
+    });
+  }, [categories, reload, pushUndo]);
+
   const toggleTrackHistory = useCallback(async (categoryId: string, trackHistory: boolean) => {
     const before = categories.find((c) => c.id === categoryId);
     setCategories((prev) =>
@@ -336,6 +352,7 @@ export function useDailyArc() {
     toggleTrackHistory,
     deleteCategory,
     reorderCategories,
+    updateCategory,
     undo,
     undoLabel: undoRef.current.length ? undoRef.current[undoRef.current.length - 1].label : null,
     todayStr,

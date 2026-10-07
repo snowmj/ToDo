@@ -2,8 +2,16 @@ import { useState } from 'react';
 import type { Category, Task } from '../lib/types';
 import type { useDailyArc } from '../lib/useDailyArc';
 
+function firstGrapheme(text: string): string {
+  const Seg = (Intl as unknown as { Segmenter?: new (l?: string, o?: { granularity: string }) => { segment: (s: string) => Iterable<{ segment: string }> } }).Segmenter;
+  if (Seg) {
+    for (const part of new Seg(undefined, { granularity: 'grapheme' }).segment(text)) return part.segment;
+  }
+  return Array.from(text)[0] ?? '';
+}
+
 export function TodayView(props: ReturnType<typeof useDailyArc>) {
-  const { categories, tasks, isDoneOn, toggleCompletion, addTask, deleteTask, updateTaskLabel, reorderTasks, deleteCategory, reorderCategories, todayStr } = props;
+  const { categories, tasks, isDoneOn, toggleCompletion, addTask, deleteTask, updateTaskLabel, reorderTasks, deleteCategory, reorderCategories, updateCategory, todayStr } = props;
   const today = todayStr();
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -12,6 +20,9 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const [settingsFor, setSettingsFor] = useState<string | null>(null);
+  const [editingCat, setEditingCat] = useState<{ id: string; field: 'icon' | 'name' } | null>(null);
+  const [catNameDraft, setCatNameDraft] = useState('');
+  const [catIconDraft, setCatIconDraft] = useState('');
 
   const startEditing = (task: Task) => {
     setEditingTaskId(task.id);
@@ -27,6 +38,23 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
   };
 
   const sorted = [...categories].sort((a, b) => a.sort_order - b.sort_order);
+
+  const startEditingCat = (cat: Category, field: 'icon' | 'name') => {
+    setEditingCat({ id: cat.id, field });
+    setCatNameDraft(cat.name);
+    setCatIconDraft(cat.icon ?? '');
+  };
+
+  const commitCatEdit = (cat: Category) => {
+    setEditingCat(null);
+    const name = catNameDraft.trim();
+    const iconRaw = catIconDraft.trim();
+    const icon = iconRaw ? firstGrapheme(iconRaw) : null;
+    const patch: { name?: string; icon?: string | null } = {};
+    if (name && name !== cat.name) patch.name = name;
+    if (icon !== (cat.icon ?? null)) patch.icon = icon;
+    if (Object.keys(patch).length) void updateCategory(cat.id, patch);
+  };
 
   const moveCategory = (categoryId: string, delta: -1 | 1) => {
     const ids = sorted.map((c) => c.id);
@@ -58,10 +86,59 @@ export function TodayView(props: ReturnType<typeof useDailyArc>) {
             style={{ background: 'var(--paper-raised)', borderColor: 'var(--line)' }}
           >
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display text-lg flex items-center gap-2">
-                <span>{cat.icon}</span>
-                {cat.name}
-              </h2>
+              {editingCat?.id === cat.id ? (
+                <div
+                  className="flex items-center gap-2 flex-1 min-w-0 mr-2"
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) commitCatEdit(cat);
+                  }}
+                >
+                  <input
+                    autoFocus={editingCat.field === 'icon'}
+                    value={catIconDraft}
+                    onChange={(e) => setCatIconDraft(e.target.value)}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                      if (e.key === 'Escape') setEditingCat(null);
+                    }}
+                    className="flex-none text-center rounded border py-0.5 text-lg"
+                    style={{ width: 44, borderColor: 'var(--accent)', background: 'var(--paper)', color: 'var(--ink)' }}
+                    placeholder="🙂"
+                    aria-label="Section icon"
+                  />
+                  <input
+                    autoFocus={editingCat.field === 'name'}
+                    value={catNameDraft}
+                    onChange={(e) => setCatNameDraft(e.target.value)}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                      if (e.key === 'Escape') setEditingCat(null);
+                    }}
+                    className="flex-1 min-w-0 font-display text-lg rounded border px-1 py-0.5"
+                    style={{ borderColor: 'var(--accent)', background: 'var(--paper)', color: 'var(--ink)' }}
+                    aria-label="Section name"
+                  />
+                </div>
+              ) : (
+                <h2 className="font-display text-lg flex items-center gap-2">
+                  <span
+                    onClick={() => startEditingCat(cat, 'icon')}
+                    className="cursor-pointer rounded"
+                    title="Click to change icon"
+                  >
+                    {cat.icon || '＋'}
+                  </span>
+                  <span
+                    onClick={() => startEditingCat(cat, 'name')}
+                    className="cursor-text rounded"
+                    title="Click to rename"
+                  >
+                    {cat.name}
+                  </span>
+                </h2>
+              )}
               <div className="flex items-center gap-2">
                 {cat.track_history && (
                   <span className="label" style={{ color: 'var(--accent)' }}>
